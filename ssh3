@@ -1,0 +1,67 @@
+import netmiko #SSH
+import getpass #Passwords
+import difflib #Differences
+
+#network information including username, password and secret
+NetworkInfo = {
+     'device_type':'',
+     'host':'192.168.56.101',
+     'username':'cisco',
+     'password':'cisco123!',
+     'secret':'class123!'
+}
+
+NetworkInfo["device_type"] = "cisco_ios"
+session = netmiko.ConnectHandler(**NetworkInfo)
+session.enable()
+
+print('** Script information **')
+NetworkInfo["password"] = getpass.getpass("Type device Password")
+NetworkInfo["secret"] = getpass.getpass("Type device Secret")
+NetworkType = input("Do you want to connect to SSH (1) or Connect to Telnet (2)?")
+if NetworkType == "1":
+    NetworkInfo["device_type"] = "cisco_ios"
+    session = netmiko.ConnectHandler(**NetworkInfo)
+    session.enable()
+    runConf = session.send_command("sh running-conf")
+    offConf = session.send_command("sh startup-conf")
+    file = open("config.txt", "w")
+    file.write(offConf)
+    file.close()
+    print ('*** Connection Sucessful***')
+
+#option X is for offline file
+print("config has been successful")
+choice = input("choose option X if you would like the offline version or choose Y if you would want the online version")
+if choice =="X":
+     backupfile = open("config.txt", "r")
+     for diff in difflib.context_diff(runConf.split("\n"), backupfile.readline()):
+          print(diff)
+#option Y is for online file
+elif choice == "Y":
+     for diff in difflib.context_diff(runConf.split("\n"), offConf.split("\n")):
+          print(diff)
+          
+choice = input("inft loopback, (A), result (B) RIP(C) ")
+if choice == "A":
+    session.send_config_set("in loopback 0", "ip addr 10.10.1.0 255.255.255.255")
+    print(output)
+elif choice == "B":
+    output = session.send_config_set("exit", "do sh ip brief")
+    print(output)
+    
+elif choice == "C":
+    session.send_config_set("router rip", "network 10.10.1.1")
+    output = session.send_command("sh ip protocol")
+    print(output)
+
+
+#option 2 for Telnet
+elif NetworkType == "2":
+    NetworkInfo['device_type'] = 'cisco_ios_telnet'
+    session = netmiko.ConnectHandler(**NetworkInfo)
+    session.enable()
+    print(session.send_command('sh ip int br'))
+else:
+     exit()
+
